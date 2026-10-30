@@ -12,6 +12,7 @@ dependencies = [
 ]
 
 [project.scripts]
+moodle = "moodle_mcp.cli:main"
 moodle-mcp = "moodle_mcp.server:main"
 
 [build-system]

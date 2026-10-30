@@ -49,3 +49,24 @@ SDK は [公式 Python SDK v1](https://py.sdk.modelcontextprotocol.io/v1/) を�
 `moodle_announcements`、`moodle_activity`、`moodle_download_file`。
 提出ツールは公開していない。ダウンロードは保存先の絶対パスを指定し、既存ファイルは上書きしない。
 ログイン要求が返ったら `moodle_login` を実行してから読み取りを再試行する。
+
+## CLI
+
+開発用環境を再インストールした後、次のように実行する。
+`python -m moodle_mcp` でも同じコマンドを使える。
+
+```sh
+.venv/bin/moodle login
+.venv/bin/moodle deadlines --days-overdue 14
+.venv/bin/moodle course 'コース名の一部'
+.venv/bin/moodle announcements --days 30
+.venv/bin/moodle activity 123 --type assign
+.venv/bin/moodle download --cmid 456 --output /absolute/path/to/material.pdf
+.venv/bin/moodle serve
+```
+
+`login` はブラウザを閉じた後に認証を確認して終了する。
+読み取りコマンドの成功結果は stdout の JSON、実行エラーは stderr の JSON。
+終了コードは成功0、実行エラー1、引数エラー2、ログイン要求3、中断130。
+`--help` と引数エラーは argparse の通常の表示。`serve` の stdout は MCP 通信専用。
+CLI 終了時はブラウザを閉じる。MCP サーバーでは5分アイドルで閉じる。
