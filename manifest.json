@@ -5,6 +5,7 @@
   "version": "0.1.0",
   "description": "東京工科大学の Moodle をローカルブラウザで読む MCP サーバー",
   "author": {"name": "表野楓", "email": "kaede.4750@gmail.com"},
+  "license": "MIT",
   "server": {
     "type": "uv",
     "entry_point": "bundle/server.py",
