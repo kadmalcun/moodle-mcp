@@ -174,6 +174,29 @@ async def new_tab(context: BrowserContext):
         await page.close()
 
 
+def _channel_executable(channel: str) -> str:
+    """インストール済み Chrome / Edge の実行ファイル。Playwright と同じ標準の置き場所から探す。
+    起動して Browser.getBrowserCommandLine で聞く方法は --enable-automation が無いと答えないので使わない
+    """
+    if sys.platform == "win32":
+        exe = {"chrome": r"Google\Chrome\Application\chrome.exe",
+               "msedge": r"Microsoft\Edge\Application\msedge.exe"}.get(channel)
+        roots = [os.environ.get(k) for k in ("LOCALAPPDATA", "PROGRAMFILES", "PROGRAMFILES(X86)")]
+        candidates = [str(Path(r) / exe) for r in roots if r and exe]
+    elif sys.platform == "darwin":
+        app = {"chrome": "Google Chrome", "msedge": "Microsoft Edge"}.get(channel)
+        candidates = [f"/Applications/{app}.app/Contents/MacOS/{app}",
+                      str(Path.home() / f"Applications/{app}.app/Contents/MacOS/{app}")] if app else []
+    else:
+        candidates = {"chrome": ["/opt/google/chrome/chrome"], "msedge": ["/opt/microsoft/msedge/msedge"]}.get(channel, [])
+    for c in candidates:
+        if Path(c).is_file():
+            return c
+    raise RuntimeError(
+        f"MOODLE_MCP_BROWSER_CHANNEL={channel} のブラウザが見つかりません（探した場所: {', '.join(candidates) or 'なし'}）"
+    )
+
+
 async def login() -> dict:
     """専用ブラウザを通常のプロセスとして開く。利用者が閉じるまで待つ。"""
     global _logging_in
@@ -190,16 +213,7 @@ async def login() -> dict:
         if sys.platform != "win32":
             profile.chmod(0o700)
         async with async_playwright() as pw:
-            executable = pw.chromium.executable_path
-            if BROWSER_CHANNEL:
-                # Playwright が解決するインストール先だけ取得し、手動ログインは別プロセスにする。
-                probe = await pw.chromium.launch(channel=BROWSER_CHANNEL, headless=True)
-                try:
-                    session = await probe.new_browser_cdp_session()
-                    command = await session.send("Browser.getBrowserCommandLine")
-                    executable = command["arguments"][0]
-                finally:
-                    await probe.close()
+            executable = _channel_executable(BROWSER_CHANNEL) if BROWSER_CHANNEL else pw.chromium.executable_path
             process = await asyncio.create_subprocess_exec(
                 executable, f"--user-data-dir={profile}", "--no-first-run",
                 "--no-default-browser-check", f"{BASE_URL}/my/",
