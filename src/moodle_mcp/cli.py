@@ -44,6 +44,9 @@ async def run(args: argparse.Namespace) -> dict:
     try:
         match args.command:
             case 'login':
+                print('ログイン用ブラウザを開きます。Moodle の画面が出たらブラウザを終了してください'
+                      + ('（Mac は ⌘Q。ウィンドウを閉じるだけでは終わりません）' if sys.platform == 'darwin' else ''),
+                      file=sys.stderr, flush=True)
                 return await browser.login()
             case 'deadlines':
                 return await browser.list_deadlines(args.days_overdue)

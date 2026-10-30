@@ -216,7 +216,11 @@ async def login() -> dict:
             executable = _channel_executable(BROWSER_CHANNEL) if BROWSER_CHANNEL else pw.chromium.executable_path
             process = await asyncio.create_subprocess_exec(
                 executable, f"--user-data-dir={profile}", "--no-first-run",
-                "--no-default-browser-check", f"{BASE_URL}/my/",
+                "--no-default-browser-check",
+                # Playwright（headless 側）が既定で付けるのと同じ Cookie の暗号鍵にする。
+                # 付けないと Mac ではキーチェーンの鍵で暗号化され、headless 側で復号できずに未ログイン扱いになる
+                "--use-mock-keychain", "--password-store=basic",
+                f"{BASE_URL}/my/",
                 stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL,
             )
             try:

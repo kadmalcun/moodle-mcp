@@ -21,7 +21,8 @@ READ = ToolAnnotations(readOnlyHint=True, destructiveHint=False)
 
 @mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False))
 async def moodle_login() -> dict:
-    """利用者 PC にログイン用ウィンドウを開く。本人がログインして閉じるまで待つ。"""
+    """利用者 PC にログイン用ウィンドウを開く。本人がログインしてブラウザを終了するまで待つ。
+    Mac ではウィンドウを閉じるだけではブラウザが終わらないので、⌘Q で終了するよう利用者に伝える。"""
     return await browser.login()
 
 
