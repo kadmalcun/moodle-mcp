@@ -34,3 +34,18 @@
 確認項目: 初回ログイン、再起動後の読み取り、ログアウト後のログイン要求、
 Google のログイン可否、読み取り中のログイン拒否。同じプロファイルを複数の
 MCP/CLI プロセスから同時に使わない。実機での確認は未実施。
+
+## MCP の起動
+
+開発時は `.venv/bin/pip install -e .` 後に `.venv/bin/moodle-mcp` で起動する。
+MCP クライアントには、このコマンドの絶対パスを stdio サーバーとして登録する。
+SDK は [公式 Python SDK v1](https://py.sdk.modelcontextprotocol.io/v1/) を使用する。
+
+```json
+{"mcpServers":{"moodle":{"command":"/absolute/path/to/.venv/bin/moodle-mcp"}}}
+```
+
+ツール: `moodle_login`、`moodle_deadlines`、`moodle_course`、
+`moodle_announcements`、`moodle_activity`、`moodle_download_file`。
+提出ツールは公開していない。ダウンロードは保存先の絶対パスを指定し、既存ファイルは上書きしない。
+ログイン要求が返ったら `moodle_login` を実行してから読み取りを再試行する。

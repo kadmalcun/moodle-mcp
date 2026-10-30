@@ -5,10 +5,14 @@ description = "東京工科大学の Moodle を AI から読むためのロー�
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "mcp>=1.26,<2",
     "playwright>=1.64,<2",
     "markdownify>=1.2,<2",
     "pypdf>=6.0,<7",
 ]
+
+[project.scripts]
+moodle-mcp = "moodle_mcp.server:main"
 
 [build-system]
 requires = ["hatchling"]
