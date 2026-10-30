@@ -13,7 +13,7 @@ def main():
     if manifest['version'] != project['version']:
         raise ValueError('manifest と pyproject の version が一致しません')
     files = [ROOT / name for name in (
-        'manifest.json', 'pyproject.toml', 'uv.lock', 'README.md', 'bundle/server.py',
+        'manifest.json', 'pyproject.toml', 'uv.lock', 'README.md', 'LICENSE', 'bundle/server.py',
         'docs/verification.md',
     )]
     files += sorted((ROOT / 'src' / 'moodle_mcp').glob('*.py'))

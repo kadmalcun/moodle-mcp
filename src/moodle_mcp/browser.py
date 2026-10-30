@@ -5,8 +5,6 @@
 - Moodle 3.9 は Web Service が無効。AJAX（lib/ajax/service.php）で使えるのはタイムラインとコース一覧だけなので、
   課題の本文・添付・提出状況は課題ページ（mod/assign/view.php）の HTML から取る
 - 書き込みは save_submission（課題のファイル提出）だけ。小テストの受験・出席登録はしない
-
-取得処理はリモート版（~/dev/mcp-server の moodle_browser.py）とほぼ同じ。違うのはブラウザの用意だけ。
 """
 
 import asyncio

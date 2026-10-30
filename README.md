@@ -2,9 +2,20 @@
 
 東京工科大学の Moodle（学内ゲートつき）を AI から読むためのローカル MCP サーバー。
 利用者の PC で動き、MCP クライアント（Claude Desktop / Claude Code / Antigravity CLI など）が stdio で起動する。
-親タスク: vault の `01-Projects/Moodle MCPのローカル版.md`
 
-自分用のリモート版（サーバー常駐、claude.ai・スマホから使う）は `~/dev/mcp-server`。取得処理はそこの `moodle_browser.py` が元。
+AI エージェントにこのリポジトリを渡して作業させる場合は [AGENTS.md](AGENTS.md) も読ませる。
+
+## 使える人・環境
+
+次をすべて満たす場合だけ動く。満たさない環境では導入しても Moodle を読めない。
+
+- 東京工科大学（TEU）の Moodle アカウントを持っている
+- 画面のある PC（macOS / Windows / Linux デスクトップ）で実行する。
+  初回ログインで本人がブラウザを操作するため、サーバー・SSH・コンテナ・クラウドでは使えない
+- PC で動く MCP クライアントを使う（下記「対応クライアント」）
+- Python 3.11 以上、または [uv](https://docs.astral.sh/uv/getting-started/installation/)
+
+Mac・Windows 実機での導入とログイン後の取得は未確認（[確認手順と記録](docs/verification.md)）。
 
 ## 方針
 
@@ -31,26 +42,52 @@
 - 使える: Claude Desktop、Claude Code、Antigravity CLI（`~/.gemini/config/mcp_config.json`）など PC で動くもの
 - 使えない: claude.ai・Gemini などの Web 版とスマホアプリ（クラウドから接続するためローカルに届かない）
 
-## 手動ログインの確認（画面のある利用者 PC）
+## 導入（ソースから）
 
-`playwright install chromium` で Chromium を用意する。専用ブラウザを開いて
-学内ゲート・Google・Moodle にログインし、Moodle の画面を確認してウィンドウをすべて閉じる。
-閉じた後に headless でログイン状態を確認する。パスワードはツールに渡さない。
-ログイン操作には時間制限を設けていないため、MCP クライアントの待機時間にも注意する。
+リポジトリを clone した利用者 PC で実行する。uv を使う場合:
 
-確認項目: 初回ログイン、再起動後の読み取り、ログアウト後のログイン要求、
-Google のログイン可否、読み取り中のログイン拒否。同じプロファイルを複数の
-MCP/CLI プロセスから同時に使わない。実機での確認は未実施。
+```sh
+git clone https://github.com/kadmalcun/moodle-mcp.git
+cd moodle-mcp
+uv sync                                   # .venv を作り、uv.lock どおりに依存を入れる
+uv run playwright install chromium        # Chrome / Edge を使うなら省略可（後述）
+uv run moodle login                       # 専用ブラウザでログインし、終わったらブラウザを終了する
+uv run moodle deadlines                   # JSON が出れば成功
+```
 
-## MCP の起動
+uv を使わない場合（Windows は `.venv\Scripts\` に読み替える）:
 
-開発時は `.venv/bin/pip install -e .` 後に `.venv/bin/moodle-mcp` で起動する。
-MCP クライアントには、このコマンドの絶対パスを stdio サーバーとして登録する。
-SDK は [公式 Python SDK v1](https://py.sdk.modelcontextprotocol.io/v1/) を使用する。
+```sh
+python -m venv .venv
+.venv/bin/pip install -e .
+.venv/bin/playwright install chromium
+.venv/bin/moodle login
+```
+
+インストール済みの Chrome / Edge を使う場合は環境変数 `MOODLE_MCP_BROWSER_CHANNEL=chrome`（または `msedge`）を
+指定し、`playwright install chromium` を省略できる。
+
+MCP クライアントには `.venv` 内の `moodle-mcp` の絶対パスを stdio サーバーとして登録する
+（Windows は `.venv\\Scripts\\moodle-mcp.exe`）。
 
 ```json
-{"mcpServers":{"moodle":{"command":"/absolute/path/to/.venv/bin/moodle-mcp"}}}
+{"mcpServers":{"moodle":{"command":"/absolute/path/to/moodle-mcp/.venv/bin/moodle-mcp"}}}
 ```
+
+登録後にクライアントを再起動し、ツール一覧に `moodle_deadlines` などが出ることを確認する。
+SDK は [公式 Python SDK v1](https://py.sdk.modelcontextprotocol.io/v1/) を使用する。
+
+## 手動ログイン
+
+`moodle login`（MCP では `moodle_login`）で専用ブラウザが開く。
+学内ゲート・Google・Moodle にログインし、Moodle の画面を確認してブラウザを終了する
+（Mac はウィンドウを閉じるだけでは終わらないので ⌘Q）。
+終了後に headless でログイン状態を確認する。パスワードはツールに渡さない。
+ログイン操作には時間制限を設けていないため、MCP クライアントの待機時間にも注意する。
+普段使いのブラウザでログイン済みでも、専用プロファイルでは初回ログインが必要。
+同じプロファイルを複数の MCP/CLI プロセスから同時に使わない。
+
+## MCP ツール
 
 ツール: `moodle_login`、`moodle_deadlines`、`moodle_course`、
 `moodle_announcements`、`moodle_activity`、`moodle_download_file`。
@@ -59,17 +96,16 @@ SDK は [公式 Python SDK v1](https://py.sdk.modelcontextprotocol.io/v1/) を�
 
 ## CLI
 
-開発用環境を再インストールした後、次のように実行する。
-`python -m moodle_mcp` でも同じコマンドを使える。
+`uv run moodle ...`、`.venv/bin/moodle ...`、`python -m moodle_mcp ...` のいずれでも同じ。
 
 ```sh
-.venv/bin/moodle login
-.venv/bin/moodle deadlines --days-overdue 14
-.venv/bin/moodle course 'コース名の一部'
-.venv/bin/moodle announcements --days 30
-.venv/bin/moodle activity 123 --type assign
-.venv/bin/moodle download --cmid 456 --output /absolute/path/to/material.pdf
-.venv/bin/moodle serve
+moodle login
+moodle deadlines --days-overdue 14
+moodle course 'コース名の一部'
+moodle announcements --days 30
+moodle activity 123 --type assign
+moodle download --cmid 456 --output /absolute/path/to/material.pdf
+moodle serve
 ```
 
 `login` はブラウザを閉じた後に認証を確認して終了する。
@@ -100,9 +136,10 @@ MCP の引数は `cmid`、`paths`（ローカルパスの配列）、`confirm`�
 
 ## 配布物からの導入
 
-配布準備中。ソースは [GitHub](https://github.com/kadmalcun/moodle-mcp) の非公開リポジトリで管理している。
-PyPI・公開リリースへの公開は未実施。
-`dist/` の wheel と .mcpb を利用者 PC にコピーして試せる。
+PyPI・公開リリースへの公開は未実施。wheel と .mcpb は `dist/` に生成されるが、
+`dist/` はリポジトリに含めていない。clone しただけでは存在しないので、
+先に「配布物の作成」の手順で作るか、作成者から受け取る。
+ソースから使うだけなら上の「導入（ソースから）」で足りる。
 
 ### uvx（Claude Code 等）
 
@@ -146,17 +183,30 @@ PyPI に公開した後は `uvx --from moodle-mcp==0.1.0 moodle-mcp` に置き�
 「課題提出を有効にする」は既定でオフ。導入後に `moodle_login` を呼び、本人がログインする。
 実機での導入・認証・読み取りは [確認手順](docs/verification.md) に沿って確認する。
 
+## 開発
+
+```sh
+uv sync
+uv run python -m unittest discover -s tests   # Moodle には接続しない。画面・ログインも不要
+```
+
+テストは標準の `unittest` で、Moodle とブラウザはモックする。追加の依存は要らない。
+コードの構成と変更時のルールは [AGENTS.md](AGENTS.md) にまとめている。
+
 ## 配布物の作成（開発者向け）
 
 ```sh
-python -m pip install build uv
-python -m build
 uv lock --check
-python scripts/build_mcpb.py
+uv build                       # dist/ に wheel・sdist
+uv run python scripts/build_mcpb.py
 npx --yes @anthropic-ai/mcpb@2.1.2 validate manifest.json
 npx --yes @anthropic-ai/mcpb@2.1.2 info dist/moodle-mcp-0.1.0.mcpb
 ```
 
 wheel・sdist と、許可したソースファイルだけを含む .mcpb を `dist/` に出力する。
-`.venv`、ブラウザのプロファイル、Cookie、vault は含めない。MCPB の依存バージョンは
-`uv.lock` に固定する。公開先とライセンスは未設定のため、一般公開前に決める。
+`.venv`、ブラウザのプロファイル、Cookie は含めない。MCPB の依存バージョンは
+`uv.lock` に固定する。版を上げるときは `pyproject.toml` と `manifest.json` の `version` をそろえる。
+
+## ライセンス
+
+[MIT](LICENSE)
