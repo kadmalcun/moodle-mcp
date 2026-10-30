@@ -74,6 +74,7 @@ _playwright: Playwright | None = None
 _context: BrowserContext | None = None
 _user_agent: str | None = None
 _users = 0
+_logging_in = False
 _idle_close: asyncio.TimerHandle | None = None
 
 
@@ -148,6 +149,8 @@ async def moodle_context():
         if _idle_close:
             _idle_close.cancel()
             _idle_close = None
+        if _logging_in:
+            raise RuntimeError("手動ログイン中です。ブラウザを閉じてから再試行してください")
         context = _context or await _launch()
         _users += 1
     try:
@@ -172,21 +175,77 @@ async def new_tab(context: BrowserContext):
         await page.close()
 
 
-async def goto(page: Page, url: str) -> None:
-    """Moodle のページを開く。ゲート→Google→ゲートの自動リダイレクトが終わるまで待ち、ログイン済みか確かめる"""
-    await page.goto(url, wait_until="load")
+async def login() -> dict:
+    """専用ブラウザを通常のプロセスとして開く。利用者が閉じるまで待つ。"""
+    global _logging_in
+    if sys.platform.startswith("linux") and not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")):
+        raise RuntimeError("画面がありません。利用者の PC のデスクトップ上で login を実行してください")
+    async with _lock:
+        if _users or _logging_in:
+            raise RuntimeError("ブラウザ使用中です。処理が終わってからログインしてください")
+        await _close_locked()
+        _logging_in = True
     try:
-        await page.wait_for_url(f"{BASE_URL}/**", timeout=NAV_TIMEOUT_MS)
-        await page.wait_for_load_state("load")
-    except Exception:
-        pass
-    logged_in = page.url.startswith(BASE_URL) and await page.evaluate(
-        "() => typeof M !== 'undefined' && !!M.cfg.sesskey"
-        " && document.body.id !== 'page-login-index'"
+        profile = profile_dir().resolve()
+        profile.mkdir(parents=True, exist_ok=True)
+        if sys.platform != "win32":
+            profile.chmod(0o700)
+        async with async_playwright() as pw:
+            executable = pw.chromium.executable_path
+            if BROWSER_CHANNEL:
+                # Playwright が解決するインストール先だけ取得し、手動ログインは別プロセスにする。
+                probe = await pw.chromium.launch(channel=BROWSER_CHANNEL, headless=True)
+                try:
+                    session = await probe.new_browser_cdp_session()
+                    command = await session.send("Browser.getBrowserCommandLine")
+                    executable = command["arguments"][0]
+                finally:
+                    await probe.close()
+            process = await asyncio.create_subprocess_exec(
+                executable, f"--user-data-dir={profile}", "--no-first-run",
+                "--no-default-browser-check", f"{BASE_URL}/my/",
+                stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL,
+            )
+            try:
+                code = await process.wait()
+            finally:
+                if process.returncode is None:
+                    process.terminate()
+                    await process.wait()
+            if code:
+                raise RuntimeError(f"ログイン用ブラウザが終了コード {code} で終了しました")
+    finally:
+        async with _lock:
+            _logging_in = False
+    try:
+        async with moodle_context() as context, new_tab(context) as page:
+            await goto(page, f"{BASE_URL}/my/")
+        return {"logged_in": True}
+    finally:
+        await close()
+
+
+async def goto(page: Page, url: str) -> None:
+    """自動リダイレクトを待つ。ログイン画面なら45秒待たずに返す。"""
+    await page.goto(url, wait_until="load")
+    await page.wait_for_function(
+        """base => {
+          const here = location.origin + location.pathname;
+          const moodle = here === base || here.startsWith(base + '/');
+          return (moodle && window.M?.cfg?.sesskey)
+            || location.hostname === 'accounts.google.com'
+            || document.querySelector('input[type="password"]')
+            || document.body.id === 'page-login-index';
+        }""", arg=BASE_URL, timeout=NAV_TIMEOUT_MS,
+    )
+    logged_in = (page.url.split("?", 1)[0] == BASE_URL or page.url.startswith(BASE_URL + "/")) and await page.evaluate(
+        "() => !!window.M?.cfg?.sesskey && document.body.id !== 'page-login-index'"
     )
     if not logged_in:
         u = urlsplit(page.url)
-        raise MoodleLoginRequired(u.netloc + u.path)
+        raise MoodleLoginRequired(
+            f"{u.netloc}{u.path}: moodle login（MCP では moodle_login）でログインしてください"
+        )
 
 
 async def ajax(page: Page, method: str, args: dict):

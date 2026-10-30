@@ -23,3 +23,14 @@
 
 - 使える: Claude Desktop、Claude Code、Antigravity CLI（`~/.gemini/config/mcp_config.json`）など PC で動くもの
 - 使えない: claude.ai・Gemini などの Web 版とスマホアプリ（クラウドから接続するためローカルに届かない）
+
+## 手動ログインの確認（画面のある利用者 PC）
+
+`playwright install chromium` で Chromium を用意する。専用ブラウザを開いて
+学内ゲート・Google・Moodle にログインし、Moodle の画面を確認してウィンドウをすべて閉じる。
+閉じた後に headless でログイン状態を確認する。パスワードはツールに渡さない。
+ログイン操作には時間制限を設けていないため、MCP クライアントの待機時間にも注意する。
+
+確認項目: 初回ログイン、再起動後の読み取り、ログアウト後のログイン要求、
+Google のログイン可否、読み取り中のログイン拒否。同じプロファイルを複数の
+MCP/CLI プロセスから同時に使わない。実機での確認は未実施。
