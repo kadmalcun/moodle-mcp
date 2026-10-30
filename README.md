@@ -100,7 +100,8 @@ MCP の引数は `cmid`、`paths`（ローカルパスの配列）、`confirm`�
 
 ## 配布物からの導入
 
-配布準備中。現在はリポジトリの remote が未設定で、PyPI・公開リリースへの公開も未実施。
+配布準備中。ソースは [GitHub](https://github.com/kadmalcun/moodle-mcp) の非公開リポジトリで管理している。
+PyPI・公開リリースへの公開は未実施。
 `dist/` の wheel と .mcpb を利用者 PC にコピーして試せる。
 
 ### uvx（Claude Code 等）

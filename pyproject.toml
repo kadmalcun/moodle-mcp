@@ -12,6 +12,9 @@ dependencies = [
     "tzdata>=2025.2; sys_platform == 'win32'",
 ]
 
+[project.urls]
+Repository = "https://github.com/kadmalcun/moodle-mcp"
+
 [project.scripts]
 moodle = "moodle_mcp.cli:main"
 moodle-mcp = "moodle_mcp.server:main"
