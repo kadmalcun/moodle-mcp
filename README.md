@@ -97,3 +97,65 @@ MCP の引数は `cmid`、`paths`（ローカルパスの配列）、`confirm`�
 同名ファイルは置換し、それ以外の既存ファイルは残す。保存だけで提出になる課題がある。
 ローカルでの読み込みは合計100 MiBまで。Moodle 側の個数・容量・形式の制約も下見で返す。
 オンラインテキストの編集や、下書き保存後の提出確定操作には対応しない。
+
+## 配布物からの導入
+
+配布準備中。現在はリポジトリの remote が未設定で、PyPI・公開リリースへの公開も未実施。
+`dist/` の wheel と .mcpb を利用者 PC にコピーして試せる。
+
+### uvx（Claude Code 等）
+
+[uv](https://docs.astral.sh/uv/getting-started/installation/) を先にインストールする。
+wheel のパスには利用者 PC にコピーした実際のパスを指定する。
+
+```sh
+uvx --from /absolute/path/moodle_mcp-0.1.0-py3-none-any.whl moodle --help
+uvx --from /absolute/path/moodle_mcp-0.1.0-py3-none-any.whl playwright install chromium
+uvx --from /absolute/path/moodle_mcp-0.1.0-py3-none-any.whl moodle login
+```
+
+同梱 Chromium の代わりにインストール済み Chrome を使う場合は、環境変数
+`MOODLE_MCP_BROWSER_CHANNEL=chrome` を指定する。この場合は Chromium の導入を省略できる。
+Windows PowerShell では `$env:MOODLE_MCP_BROWSER_CHANNEL = 'chrome'` と指定する。
+
+stdio クライアントの設定例（Windows はパスの `\` を `\\` にするか `/` を使う）:
+
+```json
+{
+  "mcpServers": {
+    "moodle": {
+      "command": "uvx",
+      "args": ["--from", "/absolute/path/moodle_mcp-0.1.0-py3-none-any.whl", "moodle-mcp"]
+    }
+  }
+}
+```
+
+GUI から uvx が見つからない場合は `command` に uvx の絶対パスを指定する。
+PyPI に公開した後は `uvx --from moodle-mcp==0.1.0 moodle-mcp` に置き換えられるが、現時点では使わない。
+
+### .mcpb（Claude Desktop）
+
+`dist/moodle-mcp-0.1.0.mcpb` を利用者 PC で開き、拡張機能としてインストールする。
+[公式 MCPB の uv ランタイム仕様](https://github.com/modelcontextprotocol/mcpb/blob/main/MANIFEST.md#uv-runtime-v04)
+に対応したホストが必要。依存関係の初回導入にはネットワークを使う。
+
+この配布形式は既定でインストール済み Google Chrome を使う。Edge を使う場合は
+設定の「ブラウザ」を `msedge` にする。MCPB 自体にはブラウザ・ログイン情報を同梱しない。
+「課題提出を有効にする」は既定でオフ。導入後に `moodle_login` を呼び、本人がログインする。
+実機での導入・認証・読み取りは [確認手順](docs/verification.md) に沿って確認する。
+
+## 配布物の作成（開発者向け）
+
+```sh
+python -m pip install build uv
+python -m build
+uv lock --check
+python scripts/build_mcpb.py
+npx --yes @anthropic-ai/mcpb@2.1.2 validate manifest.json
+npx --yes @anthropic-ai/mcpb@2.1.2 info dist/moodle-mcp-0.1.0.mcpb
+```
+
+wheel・sdist と、許可したソースファイルだけを含む .mcpb を `dist/` に出力する。
+`.venv`、ブラウザのプロファイル、Cookie、vault は含めない。MCPB の依存バージョンは
+`uv.lock` に固定する。公開先とライセンスは未設定のため、一般公開前に決める。

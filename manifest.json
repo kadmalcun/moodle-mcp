@@ -1,0 +1,39 @@
+{
+  "manifest_version": "0.4",
+  "name": "moodle-mcp",
+  "display_name": "TEU Moodle",
+  "version": "0.1.0",
+  "description": "東京工科大学の Moodle をローカルブラウザで読む MCP サーバー",
+  "author": {"name": "表野楓", "email": "kaede.4750@gmail.com"},
+  "server": {
+    "type": "uv",
+    "entry_point": "bundle/server.py",
+    "mcp_config": {
+      "command": "uv",
+      "args": ["run", "--frozen", "--directory", "${__dirname}", "bundle/server.py"],
+      "env": {
+        "MOODLE_MCP_BROWSER_CHANNEL": "${user_config.browser_channel}",
+        "MOODLE_MCP_ENABLE_SUBMISSIONS": "${user_config.enable_submissions}"
+      }
+    }
+  },
+  "tools_generated": true,
+  "user_config": {
+    "browser_channel": {
+      "type": "string",
+      "title": "ブラウザ",
+      "description": "インストール済み Google Chrome は chrome、Microsoft Edge は msedge。普段のプロファイルは使いません。",
+      "default": "chrome"
+    },
+    "enable_submissions": {
+      "type": "boolean",
+      "title": "課題提出を有効にする",
+      "description": "課題提出ツールを公開します。有効にしても既定は下見で、提出には追加の確認が必要です。",
+      "default": false
+    }
+  },
+  "compatibility": {
+    "platforms": ["darwin", "win32", "linux"],
+    "runtimes": {"python": ">=3.11"}
+  }
+}
