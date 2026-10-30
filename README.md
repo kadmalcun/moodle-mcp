@@ -8,6 +8,13 @@
 
 ## 方針
 
+東京工科大学（TEU）の Moodle 専用。URL・日本語表示・学内ゲートを前提とし、
+他大学の Moodle は対応範囲に含めない。`MOODLE_BASE_URL` による URL 変更は廃止した。
+
+環境変数 `MOODLE_MCP_PROFILE_DIR` で専用プロファイルの保存先を変更できる。
+`MOODLE_MCP_BROWSER_CHANNEL=chrome` または `msedge` でインストール済みの
+ブラウザを使える（未指定なら Playwright 同梱 Chromium）。
+
 - トランスポート: stdio。認証・アップロード URL・ダウンロード URL は持たない（ローカルのパスを直接読み書きする）
 - ブラウザ: Playwright の `launch_persistent_context` で専用プロファイルの Chromium を起動する
   - 学内ゲートのチケットは接続元に紐づくため、利用者の PC 上のブラウザで本人がログインする

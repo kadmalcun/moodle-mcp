@@ -28,9 +28,8 @@ from markdownify import markdownify
 from playwright.async_api import BrowserContext, Page, Playwright, async_playwright
 from pypdf import PdfReader
 
-BASE_URL = os.environ.get(
-    "MOODLE_BASE_URL", "https://service.cloud.teu.ac.jp/moodle_epyc"
-).rstrip("/")
+# TEU 専用。URL だけ変えても他大学の認証・画面構成には対応できない。
+BASE_URL = "https://service.cloud.teu.ac.jp/moodle_epyc"
 # 既定は Playwright 同梱の Chromium（playwright install chromium が要る）。
 # "chrome" / "msedge" にすると PC に入っているものを使う
 BROWSER_CHANNEL = os.environ.get("MOODLE_MCP_BROWSER_CHANNEL") or None
