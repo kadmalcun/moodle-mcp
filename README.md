@@ -54,7 +54,7 @@ SDK は [公式 Python SDK v1](https://py.sdk.modelcontextprotocol.io/v1/) を�
 
 ツール: `moodle_login`、`moodle_deadlines`、`moodle_course`、
 `moodle_announcements`、`moodle_activity`、`moodle_download_file`。
-提出ツールは公開していない。ダウンロードは保存先の絶対パスを指定し、既存ファイルは上書きしない。
+提出ツールは既定では公開しない（有効化は後述）。ダウンロードは保存先の絶対パスを指定し、既存ファイルは上書きしない。
 ログイン要求が返ったら `moodle_login` を実行してから読み取りを再試行する。
 
 ## CLI
@@ -77,3 +77,23 @@ SDK は [公式 Python SDK v1](https://py.sdk.modelcontextprotocol.io/v1/) を�
 終了コードは成功0、実行エラー1、引数エラー2、ログイン要求3、中断130。
 `--help` と引数エラーは argparse の通常の表示。`serve` の stdout は MCP 通信専用。
 CLI 終了時はブラウザを閉じる。MCP サーバーでは5分アイドルで閉じる。
+
+## 提出ツール（任意）
+
+`MOODLE_MCP_ENABLE_SUBMISSIONS=true` を設定して起動した場合だけ、
+MCP の `moodle_submit_files` を公開する。CLI も同じ設定が必要。
+MCP クライアントのサーバー設定では `env` にこの変数を追加して再起動する。
+
+```sh
+# macOS / Linux（Windows PowerShell は $env:MOODLE_MCP_ENABLE_SUBMISSIONS = 'true'）
+export MOODLE_MCP_ENABLE_SUBMISSIONS=true
+moodle submit 123 /absolute/path/to/report.pdf
+# 下見の課題名、ファイル名、SHA-256、既存ファイルの置換計画と problems を確認する。
+# 利用者が提出を了承した後にだけ --confirm を付けて再実行する。
+```
+
+MCP の引数は `cmid`、`paths`（ローカルパスの配列）、`confirm`（既定 false）。
+下見ではアップロード・削除・保存を実行しない。実行前に対象とファイルを再確認する。
+同名ファイルは置換し、それ以外の既存ファイルは残す。保存だけで提出になる課題がある。
+ローカルでの読み込みは合計100 MiBまで。Moodle 側の個数・容量・形式の制約も下見で返す。
+オンラインテキストの編集や、下書き保存後の提出確定操作には対応しない。

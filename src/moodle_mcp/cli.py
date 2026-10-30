@@ -4,7 +4,7 @@ import asyncio
 import json
 import sys
 from . import browser
-from .operations import download_file
+from .operations import download_file, submit_files
 
 
 def nonnegative(value: str) -> int:
@@ -33,6 +33,10 @@ def parser() -> argparse.ArgumentParser:
     source.add_argument('--cmid', type=int)
     source.add_argument('--url')
     download.add_argument('--output', required=True)
+    submit = commands.add_parser('submit', help='課題のファイル提出（既定は下見、要設定）')
+    submit.add_argument('cmid', type=int)
+    submit.add_argument('paths', nargs='+')
+    submit.add_argument('--confirm', action='store_true', help='下見内容を確認・了承した後に実際に提出する')
     return result
 
 
@@ -49,6 +53,8 @@ async def run(args: argparse.Namespace) -> dict:
                 return await browser.list_announcements(args.days)
             case 'activity':
                 return await browser.get_activity(args.cmid, args.modtype)
+            case 'submit':
+                return await submit_files(args.cmid, args.paths, args.confirm)
             case 'download':
                 return await download_file(args.output, args.cmid, args.url)
         raise ValueError('未知のコマンドです')

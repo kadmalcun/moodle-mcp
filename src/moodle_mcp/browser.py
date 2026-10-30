@@ -778,6 +778,9 @@ def _check_files(form: dict, existing: list[dict], files: list[tuple[str, bytes]
 
 async def save_submission(cmid: int, files: list[tuple[str, bytes]], confirm: bool) -> dict:
     """課題にファイルをアップロードして保存する。confirm=False なら何も変えずに下見だけ返す"""
+    if confirm:
+        from .config import require_submissions
+        require_submissions()
     if not files and confirm:
         raise ValueError("ファイルが1つも指定されていない")
     async with moodle_context() as context, new_tab(context) as page:

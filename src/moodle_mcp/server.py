@@ -1,9 +1,10 @@
-"""読み取り専用の stdio MCP サーバー。"""
+"""既定で読み取り専用の stdio MCP サーバー。"""
 from contextlib import asynccontextmanager
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 from . import browser
-from .operations import download_file
+from .operations import download_file, submit_files
+from .config import submissions_enabled
 
 
 @asynccontextmanager
@@ -56,6 +57,16 @@ async def moodle_activity(cmid: int, modtype: str) -> dict:
 async def moodle_download_file(output: str, cmid: int | None = None, url: str | None = None) -> dict:
     """教材をローカルの output パスに保存。cmid または Moodle ファイル url の一方が必要。上書きしない。"""
     return await download_file(output, cmid, url)
+
+
+if submissions_enabled():
+    @mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True))
+    async def moodle_submit_files(cmid: int, paths: list[str], confirm: bool = False) -> dict:
+        """ローカルファイルを課題に提出。既定 confirm=false で課題・ファイル名・ハッシュ・置換計画を下見。
+        下見結果を利用者に示し、提出の明示的な了承を得てから confirm=true で再実行すること。
+        保存だけで提出済みになる課題がある。同名ファイルは置換される。
+        """
+        return await submit_files(cmid, paths, confirm)
 
 
 def main():
