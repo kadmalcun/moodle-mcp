@@ -45,6 +45,9 @@ MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024
 MAX_TEXT_CHARS = 20_000
 # zip 内の1ファイルあたり。課題に関係ない同梱ファイル（Bean 等）で予算を使い切らないように
 MAX_ENTRY_CHARS = 6_000
+# get_course のセクション本文・ラベル1件あたり。休講・オンデマンド化などの告知が入るので、
+# 長い表（SA の配属一覧など）以外は切らない。11/9 の実測で全12コースの最長は 1,587 文字
+MAX_SECTION_TEXT_CHARS = 2_000
 
 
 class MoodleLoginRequired(Exception):
@@ -437,16 +440,21 @@ async def get_course(query: str) -> dict:
         await goto(page, f"{BASE_URL}/course/view.php?id={course['id']}")
         sections = await page.evaluate("""() => [...document.querySelectorAll('li.section')].map(s => ({
           name: s.querySelector('.sectionname')?.innerText.trim(),
-          summary: (s.querySelector('.summary')?.innerText.trim() || '').slice(0, 300),
+          summary: s.querySelector('.summary')?.innerText.trim() || '',
           activities: [...s.querySelectorAll('li.activity')].map(a => {
             const type = ([...a.classList].find(c => c.startsWith('modtype_')) || '').replace('modtype_', '');
             const href = a.querySelector('a[href*="/mod/"]')?.href;
             const id = href && new URL(href).searchParams.get('id');
             return type === 'label'
-              ? {type, text: a.innerText.trim().slice(0, 300)}
+              ? {type, text: a.innerText.trim()}
               : {id: id ? Number(id) : null, type, name: a.querySelector('.instancename')?.childNodes[0]?.textContent.trim()};
           }),
         }))""")
+    for s in sections:
+        s["summary"] = _truncate(_tidy(s["summary"]), MAX_SECTION_TEXT_CHARS)
+        for a in s["activities"]:
+            if "text" in a:
+                a["text"] = _truncate(_tidy(a["text"]), MAX_SECTION_TEXT_CHARS)
     return {
         "id": course["id"],
         "course": course["fullname"],
